@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plan Value Calculator</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --border: #e2e8f0;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --best-deal: #16a34a;
+            --badge-bg: #dcfce7;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg);
+            color: var(--text-main);
+            padding: 2rem 1rem;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 750px;
+            margin: 0 auto;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+            border: 1px solid var(--border);
+            padding: 1.75rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 0.35rem;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 500px;
+        }
+
+        th {
+            text-align: left;
+            padding: 10px 12px;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-muted);
+            border-bottom: 2px solid var(--border);
+        }
+
+        td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        tr.best-row {
+            background-color: #f0fdf4;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px 10px;
+            font-size: 0.95rem;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: #fff;
+            color: var(--text-main);
+            outline: none;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+
+        input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+        }
+
+        .numeric-input {
+            text-align: right;
+        }
+
+        .result-box {
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            min-height: 24px;
+        }
+
+        .best-badge {
+            background: var(--badge-bg);
+            color: var(--best-deal);
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 9999px;
+            display: inline-block;
+            white-space: nowrap;
+        }
+
+        .actions {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1.25rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .btn {
+            background-color: #fff;
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .btn:hover {
+            background-color: #f1f5f9;
+        }
+
+        .summary-banner {
+            margin-top: 1.25rem;
+            padding: 12px 16px;
+            border-radius: 8px;
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            color: #1e40af;
+            font-size: 0.95rem;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Is the Plan Valuable or Not?</h1>
+            <p>Compare plans (Price ÷ Validity / Units) to find the cheapest cost per day or unit.</p>
+        </header>
+
+        <div class="table-responsive">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 10%;">#</th>
+                        <th style="width: 30%;">Price (₹ / $)</th>
+                        <th style="width: 30%;">Days / Units</th>
+                        <th style="width: 30%;">Cost per Day / Unit</th>
+                    </tr>
+                </thead>
+                <tbody id="plans-table-body">
+                    <!-- Dynamic rows inserted here -->
+                </tbody>
+            </table>
+        </div>
+
+        <div id="summary-banner" class="summary-banner"></div>
+
+        <div class="actions">
+            <button type="button" class="btn" id="btn-add-row">+ Add Row</button>
+            <button type="button" class="btn" id="btn-clear">Clear All</button>
+        </div>
+    </div>
+
+    <script>
+        const tableBody = document.getElementById('plans-table-body');
+        const summaryBanner = document.getElementById('summary-banner');
+        const btnAddRow = document.getElementById('btn-add-row');
+        const btnClear = document.getElementById('btn-clear');
+
+        let rows = [];
+
+        function recalculateAll() {
+            let validPlans = [];
+
+            // Compute rate for each row
+            rows.forEach((rowObj, index) => {
+                const price = parseFloat(rowObj.priceInput.value);
+                const units = parseFloat(rowObj.unitsInput.value);
+
+                rowObj.rowElement.classList.remove('best-row');
+                rowObj.resultElement.innerHTML = '';
+
+                if (!rowObj.priceInput.value.trim() || !rowObj.unitsInput.value.trim()) {
+                    return;
+                }
+
+                if (isNaN(price) || isNaN(units)) {
+                    rowObj.resultElement.textContent = 'Invalid';
+                } else if (units <= 0) {
+                    rowObj.resultElement.textContent = 'Units must be > 0';
+                } else {
+                    const rate = price / units;
+                    const formatted = Number.isInteger(rate) ? rate : Number(rate.toFixed(2));
+                    validPlans.push({
+                        rowNum: index + 1,
+                        rate: rate,
+                        formatted: formatted,
+                        rowObj: rowObj
+                    });
+                    rowObj.resultElement.textContent = `${formatted} / day`;
+                }
+            });
+
+            // Determine best value (lowest rate)
+            if (validPlans.length > 0) {
+                const minRate = Math.min(...validPlans.map(p => p.rate));
+                const bestPlans = validPlans.filter(p => Math.abs(p.rate - minRate) < 0.00001);
+
+                bestPlans.forEach(p => {
+                    p.rowObj.rowElement.classList.add('best-row');
+                    const badge = document.createElement('span');
+                    badge.className = 'best-badge';
+                    badge.textContent = '★ Best Value';
+                    p.rowObj.resultElement.appendChild(badge);
+                });
+
+                if (validPlans.length > 1) {
+                    summaryBanner.style.display = 'block';
+                    const names = bestPlans.map(p => `<strong>Row #${p.rowNum}</strong> (${p.formatted}/day)`).join(', ');
+                    summaryBanner.innerHTML = `Most valuable: ${names}`;
+                } else {
+                    summaryBanner.style.display = 'none';
+                }
+            } else {
+                summaryBanner.style.display = 'none';
+            }
+        }
+
+        function createRow() {
+            const tr = document.createElement('tr');
+            const rowNumber = rows.length + 1;
+
+            // Row index
+            const tdIndex = document.createElement('td');
+            tdIndex.textContent = rowNumber;
+            tdIndex.style.color = 'var(--text-muted)';
+            tdIndex.style.fontWeight = '500';
+
+            // Price (Numerator)
+            const tdPrice = document.createElement('td');
+            const priceInput = document.createElement('input');
+            priceInput.type = 'number';
+            priceInput.placeholder = 'e.g. 299';
+            priceInput.className = 'numeric-input';
+            priceInput.step = 'any';
+            priceInput.min = '0';
+            tdPrice.appendChild(priceInput);
+
+            // Units / Days (Denominator)
+            const tdUnits = document.createElement('td');
+            const unitsInput = document.createElement('input');
+            unitsInput.type = 'number';
+            unitsInput.placeholder = 'e.g. 28';
+            unitsInput.className = 'numeric-input';
+            unitsInput.step = 'any';
+            unitsInput.min = '1';
+            tdUnits.appendChild(unitsInput);
+
+            // Result
+            const tdResult = document.createElement('td');
+            const resultBox = document.createElement('div');
+            resultBox.className = 'result-box';
+            resultBox.textContent = '-';
+            tdResult.appendChild(resultBox);
+
+            tr.append(tdIndex, tdPrice, tdUnits, tdResult);
+            tableBody.appendChild(tr);
+
+            const rowData = {
+                rowElement: tr,
+                priceInput: priceInput,
+                unitsInput: unitsInput,
+                resultElement: resultBox
+            };
+
+            [priceInput, unitsInput].forEach(inp => {
+                inp.addEventListener('input', recalculateAll);
+            });
+
+            rows.push(rowData);
+        }
+
+        // Initialize with default 6 rows
+        for (let i = 0; i < 6; i++) {
+            createRow();
+        }
+
+        btnAddRow.addEventListener('click', () => {
+            createRow();
+        });
+
+        btnClear.addEventListener('click', () => {
+            rows.forEach(r => {
+                r.priceInput.value = '';
+                r.unitsInput.value = '';
+            });
+            recalculateAll();
+        });
+    </script>
+</body>
+</html>
