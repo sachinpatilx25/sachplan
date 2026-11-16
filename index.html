@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Plan Value Calculator</title>
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="manifest" href="manifest.json">
     <style>
         :root {
             --primary: #2563eb;
@@ -32,7 +34,7 @@
         }
 
         .container {
-            max-width: 750px;
+            max-width: 850px;
             margin: 0 auto;
             background: var(--card-bg);
             border-radius: 12px;
@@ -169,7 +171,7 @@
 <body>
     <div class="container">
         <header>
-            <h1>Is the Plan Valuable or Not?</h1>
+            <h1>the Plan Valuable or Not?</h1>
             <p>Compare plans (Price ÷ Validity / Units) to find the cheapest cost per day or unit.</p>
         </header>
 
@@ -177,10 +179,11 @@
             <table>
                 <thead>
                     <tr>
-                        <th style="width: 10%;">#</th>
-                        <th style="width: 30%;">Price (₹ / $)</th>
-                        <th style="width: 30%;">Days / Units</th>
-                        <th style="width: 30%;">Cost per Day / Unit</th>
+                        <th style="width: 8%;">#</th>
+                        <th style="width: 26%;">Price (₹ / $)</th>
+                        <th style="width: 26%;">Days / Units</th>
+                        <th style="width: 20%;">Cost per Day / Unit</th>
+                        <th style="width: 20%;">Cost for 28 Days</th>
                     </tr>
                 </thead>
                 <tbody id="plans-table-body">
@@ -215,25 +218,34 @@
 
                 rowObj.rowElement.classList.remove('best-row');
                 rowObj.resultElement.innerHTML = '';
+                rowObj.result28Element.innerHTML = '';
 
                 if (!rowObj.priceInput.value.trim() || !rowObj.unitsInput.value.trim()) {
+                    rowObj.resultElement.textContent = '-';
+                    rowObj.result28Element.textContent = '-';
                     return;
                 }
 
                 if (isNaN(price) || isNaN(units)) {
                     rowObj.resultElement.textContent = 'Invalid';
+                    rowObj.result28Element.textContent = 'Invalid';
                 } else if (units <= 0) {
                     rowObj.resultElement.textContent = 'Units must be > 0';
+                    rowObj.result28Element.textContent = '-';
                 } else {
                     const rate = price / units;
+                    const cost28 = rate * 28;
                     const formatted = Number.isInteger(rate) ? rate : Number(rate.toFixed(2));
+                    const formatted28 = Number.isInteger(cost28) ? cost28 : Number(cost28.toFixed(2));
                     validPlans.push({
                         rowNum: index + 1,
                         rate: rate,
                         formatted: formatted,
+                        formatted28: formatted28,
                         rowObj: rowObj
                     });
                     rowObj.resultElement.textContent = `${formatted} / day`;
+                    rowObj.result28Element.textContent = `${formatted28}`;
                 }
             });
 
@@ -252,7 +264,7 @@
 
                 if (validPlans.length > 1) {
                     summaryBanner.style.display = 'block';
-                    const names = bestPlans.map(p => `<strong>Row #${p.rowNum}</strong> (${p.formatted}/day)`).join(', ');
+                    const names = bestPlans.map(p => `<strong>Row #${p.rowNum}</strong> (${p.formatted}/day, ${p.formatted28} for 28d)`).join(', ');
                     summaryBanner.innerHTML = `Most valuable: ${names}`;
                 } else {
                     summaryBanner.style.display = 'none';
@@ -299,14 +311,22 @@
             resultBox.textContent = '-';
             tdResult.appendChild(resultBox);
 
-            tr.append(tdIndex, tdPrice, tdUnits, tdResult);
+            // Cost for 28 days / units
+            const tdResult28 = document.createElement('td');
+            const result28Box = document.createElement('div');
+            result28Box.className = 'result-box';
+            result28Box.textContent = '-';
+            tdResult28.appendChild(result28Box);
+
+            tr.append(tdIndex, tdPrice, tdUnits, tdResult, tdResult28);
             tableBody.appendChild(tr);
 
             const rowData = {
                 rowElement: tr,
                 priceInput: priceInput,
                 unitsInput: unitsInput,
-                resultElement: resultBox
+                resultElement: resultBox,
+                result28Element: result28Box
             };
 
             [priceInput, unitsInput].forEach(inp => {
@@ -329,6 +349,8 @@
             rows.forEach(r => {
                 r.priceInput.value = '';
                 r.unitsInput.value = '';
+                r.resultElement.textContent = '-';
+                r.result28Element.textContent = '-';
             });
             recalculateAll();
         });
